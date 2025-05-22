@@ -28,7 +28,5 @@ func initPostgreSql() {
 		os.Exit(1)
 	}
 
-	log.Println("=============== successfully connected to the database ===============")
-
 	global.Postgresql = db
 }

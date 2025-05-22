@@ -16,3 +16,10 @@ kafka:
   kafka_broker_1: "localhost:9092"
   kafka_broker_2: "localhost:9093"
   kafka_broker_3: "localhost:9094"
+momo:
+  end_point: "https://test-payment.momo.vn/v2/gateway/api/create"
+  partner_code: "MOMO"
+  access_key: "F8BBA842ECF85"
+  secret_key: "K951B6PE1waDMi640xX08PD3vg6EkVlz"
+  redirect_url: "http://localhost:5007/v1/momo/customer/verify_payment"
+  ipn_url: "https://3a63-115-76-51-145.ngrok-free.app/v1/momo/customer/verify_payment"

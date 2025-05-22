@@ -43,4 +43,6 @@ func loadConfigsFromYAML() {
 	if err != nil {
 		log.Fatalf("unable to decode into struct (yaml), %v", err)
 	}
+
+	log.Printf("%+v", global.Config.ServiceSetting.MoMoSetting)
 }

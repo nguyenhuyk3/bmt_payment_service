@@ -9,6 +9,7 @@ type serviceSetting struct {
 	PostgreSql   postgreSetting `mapstructure:"database"`
 	KafkaSetting kafkaSetting   `mapstructure:"kafka"`
 	RedisSetting redisSetting   `mapstructure:"redis"`
+	MoMoSetting  momoSetting    `mapstructure:"momo"`
 }
 
 type serverSetting struct {
@@ -38,4 +39,13 @@ type redisSetting struct {
 	Username string `mapstructure:"username,omitempty"`
 	Password string `mapstructure:"password,omitempty"`
 	Database int    `mapstructure:"database,omitempty"`
+}
+
+type momoSetting struct {
+	EndPoint    string `mapstructure:"end_point"`
+	PartnerCode string `mapstructure:"partner_code"`
+	AccessKey   string `mapstructure:"access_key"`
+	SecretKey   string `mapstructure:"secret_key"`
+	RedirectURL string `mapstructure:"redirect_url"`
+	IPNURL      string `mapstructure:"ipn_url"`
 }

@@ -11,16 +11,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sony/sonyflake"
 )
 
 type MoMoController struct {
 	MoMoService services.IPayment
-	Flake       *sonyflake.Sonyflake
 }
 
 func (m *MoMoController) CreatePaymentURL(c *gin.Context) {
-	var req request.PaymentReq
+	var req request.CreatePaymentURLReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		responses.FailureResponse(c, http.StatusBadRequest, fmt.Sprintf("invalid request: %v", err))
 		return
@@ -29,8 +27,6 @@ func (m *MoMoController) CreatePaymentURL(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	orderIDInt, _ := m.Flake.NextID()
-	req.OrderId = orderIDInt
 	paymentURL, status, err := m.MoMoService.CreatePaymentURL(ctx, req)
 	if err != nil {
 		responses.FailureResponse(c, status, err.Error())
@@ -43,12 +39,37 @@ func (m *MoMoController) CreatePaymentURL(c *gin.Context) {
 }
 
 func (m *MoMoController) VerifyPaymentCallback(c *gin.Context) {
+	/**
+	resultCode = 0: transaction successful.
+	resultCode = 9000: transaction authorized successfully.
+	resultCode ≠ 0: transaction failed.
+	*/
+
+	/**
+	  * Use this result to update the order status.
+	  * Sample log result:
+	  * {
+			partnerCode: 'MOMO',
+			orderId: 'MOMO1712108682648',
+			requestId: 'MOMO1712108682648',
+			amount: 10000,
+			orderInfo: 'pay with MoMo',
+			orderType: 'momo_wallet',
+			transId: 4014083433,
+			resultCode: 0,
+			message: 'Success.',
+			payType: 'qr',
+			responseTime: 1712108811069,
+			extraData: '',
+			signature: '10398fbe70cd3052f443da99f7c4befbf49ab0d0c6cd7dc14efffd6e09a526c0'
+		}
+	*/
 	// orderId := c.Query("orderId")
 	// requestID := c.Query("requestId")
-	// amount := c.Query("amount")
+	amount := c.Query("amount")
 	// orderInfo := c.Query("orderInfo")
 	// orderType := c.Query("orderType")
-	// transId := c.Query("transId")
+	transId := c.Query("transId")
 	resultCode := c.Query("resultCode")
 	// message := c.Query("message")
 	// payType := c.Query("payType")
@@ -64,8 +85,33 @@ func (m *MoMoController) VerifyPaymentCallback(c *gin.Context) {
 		return
 	}
 
-	if resultCode == "0" {
-		responses.SuccessResponse(c, http.StatusOK, "pay successfully", paymentInfo)
+	fmt.Printf("%+v", paymentInfo)
+
+	if resultCode == "0" || resultCode == "9000" {
+		orderIdFloat, ok := paymentInfo["order_id"].(float64)
+		if !ok {
+			responses.FailureResponse(c, http.StatusBadRequest, "invalid order id format in extraData")
+			return
+		}
+		orderIdInt32 := int32(orderIdFloat)
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+
+		req := request.CreatePaymentRecordReq{
+			Amount:        amount,
+			OrderId:       orderIdInt32,
+			Status:        "success",
+			Method:        "momo",
+			TransactionId: transId,
+		}
+		data, status, err := m.MoMoService.CreatePaymentRecord(ctx, req)
+		if err != nil {
+			responses.FailureResponse(c, status, fmt.Sprintf("failed to pay: %v", err))
+			return
+		}
+
+		responses.SuccessResponse(c, status, "pay successfully", data)
 	} else {
 		responses.FailureResponse(c, http.StatusInternalServerError, "pay failed")
 	}
@@ -76,6 +122,5 @@ func NewMoMoController(
 ) *MoMoController {
 	return &MoMoController{
 		MoMoService: moMoService,
-		Flake:       sonyflake.NewSonyflake(sonyflake.Settings{}),
 	}
 }

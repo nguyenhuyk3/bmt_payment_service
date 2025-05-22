@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"bmt_payment_service/db/sqlc"
 	"bmt_payment_service/global"
 	"bmt_payment_service/internal/controllers"
 	"bmt_payment_service/internal/implementations/momo"
@@ -12,7 +13,9 @@ type MoMoRouter struct {
 }
 
 func (m *MoMoRouter) InitMoMoRouter(router *gin.RouterGroup) {
+	sqlStore := sqlc.NewStore(global.Postgresql)
 	moMoService := momo.NewMomoPayment(
+		sqlStore,
 		global.Config.ServiceSetting.MoMoSetting.EndPoint,
 		global.Config.ServiceSetting.MoMoSetting.PartnerCode,
 		global.Config.ServiceSetting.MoMoSetting.AccessKey,

@@ -45,25 +45,6 @@ func (m *MoMoController) VerifyPaymentCallback(c *gin.Context) {
 	resultCode ≠ 0: transaction failed.
 	*/
 
-	/**
-	  * Use this result to update the order status.
-	  * Sample log result:
-	  * {
-			partnerCode: 'MOMO',
-			orderId: 'MOMO1712108682648',
-			requestId: 'MOMO1712108682648',
-			amount: 10000,
-			orderInfo: 'pay with MoMo',
-			orderType: 'momo_wallet',
-			transId: 4014083433,
-			resultCode: 0,
-			message: 'Success.',
-			payType: 'qr',
-			responseTime: 1712108811069,
-			extraData: '',
-			signature: '10398fbe70cd3052f443da99f7c4befbf49ab0d0c6cd7dc14efffd6e09a526c0'
-		}
-	*/
 	// orderId := c.Query("orderId")
 	// requestID := c.Query("requestId")
 	amount := c.Query("amount")
@@ -71,7 +52,7 @@ func (m *MoMoController) VerifyPaymentCallback(c *gin.Context) {
 	// orderType := c.Query("orderType")
 	transId := c.Query("transId")
 	resultCode := c.Query("resultCode")
-	// message := c.Query("message")
+	message := c.Query("message")
 	// payType := c.Query("payType")
 	// responseTime := c.Query("responseTime")
 	extraData := c.Query("extraData")
@@ -85,34 +66,48 @@ func (m *MoMoController) VerifyPaymentCallback(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("%+v", paymentInfo)
+	orderIdFloat, ok := paymentInfo["order_id"].(float64)
+	if !ok {
+		responses.FailureResponse(c, http.StatusBadRequest, "invalid order id format in extraData")
+		return
+	}
+
+	orderIdInt32 := int32(orderIdFloat)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
 
 	if resultCode == "0" || resultCode == "9000" {
-		orderIdFloat, ok := paymentInfo["order_id"].(float64)
-		if !ok {
-			responses.FailureResponse(c, http.StatusBadRequest, "invalid order id format in extraData")
-			return
-		}
-		orderIdInt32 := int32(orderIdFloat)
-
-		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-		defer cancel()
 
 		req := request.CreatePaymentRecordReq{
 			Amount:        amount,
 			OrderId:       orderIdInt32,
 			Status:        "success",
 			Method:        "momo",
+			Message:       message,
 			TransactionId: transId,
 		}
 		data, status, err := m.MoMoService.CreatePaymentRecord(ctx, req)
 		if err != nil {
-			responses.FailureResponse(c, status, fmt.Sprintf("failed to pay: %v", err))
+			responses.FailureResponse(c, status, fmt.Sprintf("failed to pay with resultCode = 0: %v", err))
 			return
 		}
 
 		responses.SuccessResponse(c, status, "pay successfully", data)
 	} else {
+		req := request.CreatePaymentRecordReq{
+			Amount:        amount,
+			OrderId:       orderIdInt32,
+			Status:        "failed",
+			Method:        "momo",
+			Message:       message,
+			TransactionId: transId,
+		}
+		_, status, err := m.MoMoService.CreatePaymentRecord(ctx, req)
+		if err != nil {
+			responses.FailureResponse(c, status, fmt.Sprintf("failed to pay with resultCode != 0: %v", err))
+			return
+		}
+
 		responses.FailureResponse(c, http.StatusInternalServerError, "pay failed")
 	}
 }

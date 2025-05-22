@@ -10,10 +10,11 @@ type CreatePaymentURLReq struct {
 }
 
 type CreatePaymentRecordReq struct {
-	Amount        string `json:"amount" binding:"required"`
-	OrderId       int32  `json:"order_id" binding:"required"`
+	Amount        string
+	OrderId       int32
 	Status        string
 	Method        string
+	Message       string
 	TransactionId string
 }
 

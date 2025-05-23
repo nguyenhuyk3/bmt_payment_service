@@ -77,7 +77,6 @@ func (m *MoMoController) VerifyPaymentCallback(c *gin.Context) {
 	defer cancel()
 
 	if resultCode == "0" || resultCode == "9000" {
-
 		req := request.CreatePaymentRecordReq{
 			Amount:        amount,
 			OrderId:       orderIdInt32,

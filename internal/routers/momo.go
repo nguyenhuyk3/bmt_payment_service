@@ -5,6 +5,7 @@ import (
 	"bmt_payment_service/global"
 	"bmt_payment_service/internal/controllers"
 	"bmt_payment_service/internal/implementations/momo"
+	"bmt_payment_service/internal/implementations/redis"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,8 +15,10 @@ type MoMoRouter struct {
 
 func (m *MoMoRouter) InitMoMoRouter(router *gin.RouterGroup) {
 	sqlStore := sqlc.NewStore(global.Postgresql)
+	redisClient := redis.NewRedisClient()
 	moMoService := momo.NewMomoPayment(
 		sqlStore,
+		redisClient,
 		global.Config.ServiceSetting.MoMoSetting.EndPoint,
 		global.Config.ServiceSetting.MoMoSetting.PartnerCode,
 		global.Config.ServiceSetting.MoMoSetting.AccessKey,

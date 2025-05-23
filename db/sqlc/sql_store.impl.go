@@ -20,25 +20,20 @@ type SqlStore struct {
 func (s *SqlStore) CreatePaymentTran(ctx context.Context, arg request.CreatePaymentRecordReq) (Payment, error) {
 	var payment Payment
 	err := s.execTran(ctx, func(q *Queries) error {
-		var status PaymentStatuses
-
-		err := status.Scan(arg.Status)
-		if err != nil {
-			return fmt.Errorf("failed to scan status: %w", err)
+		status, method := new(PaymentStatuses), new(PaymentMethods)
+		if err := status.Scan(arg.Status); err != nil {
+			return fmt.Errorf("invalid status: %w", err)
 		}
-
-		var method PaymentMethods
-		err = method.Scan(arg.Method)
-		if err != nil {
-			return fmt.Errorf("failed to scan method: %w", err)
+		if err := method.Scan(arg.Method); err != nil {
+			return fmt.Errorf("invalid method: %w", err)
 		}
 
 		paymentData, err := q.CreatePayment(ctx,
 			CreatePaymentParams{
 				OrderID:       arg.OrderId,
 				Amount:        arg.Amount,
-				Status:        status,
-				Method:        method,
+				Status:        *status,
+				Method:        *method,
 				TransactionID: arg.TransactionId,
 				ErrorMessage: pgtype.Text{
 					String: arg.Message,
@@ -63,7 +58,7 @@ func (s *SqlStore) CreatePaymentTran(ctx context.Context, arg request.CreatePaym
 		}
 		err = q.CreateOutbox(ctx,
 			CreateOutboxParams{
-				AggregatedType: "PAYMENT",
+				AggregatedType: "ORDER_ID",
 				AggregatedID:   arg.OrderId,
 				EventType:      eventType,
 				Payload:        payloadBytes,
@@ -76,6 +71,10 @@ func (s *SqlStore) CreatePaymentTran(ctx context.Context, arg request.CreatePaym
 
 		return nil
 	})
+
+	if err != nil {
+		return Payment{}, err
+	}
 
 	return payment, err
 }

@@ -18,3 +18,7 @@ type moMoPayload struct {
 	RequestType  string `json:"requestType"`
 	Signature    string `json:"signature"`
 }
+
+type totalPrice struct {
+	TotalPrice int32 `json:"total_price" binding"required"`
+}

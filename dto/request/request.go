@@ -3,10 +3,10 @@ package request
 import "time"
 
 type CreatePaymentURLReq struct {
-	Amount int64 `json:"amount" binding:"required"`
+	OrderId int32 `json:"order_id" binding:"required"`
+	Amount  int64 `json:"amount" binding:"required"`
 	// OrderInfo string `json:"order_info" binding:"required"`
-
-	ExtraData string `json:"extra_data" binding:"required"`
+	// ExtraData string `json:"extra_data" binding:"required"`
 }
 
 type CreatePaymentRecordReq struct {
